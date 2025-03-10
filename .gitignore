@@ -1,0 +1,98 @@
+## Visual Studio 生成的文件
+.vs/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+## Visual Studio 项目文件
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+## 构建结果
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]uild/
+msbuild.log
+
+## NuGet包文件
+*.nupkg
+# NuGet包文件夹
+**/[Pp]ackages/*
+# 除了此文件
+!**/[Pp]ackages/build/
+# NuGet v3的项目.json文件
+*.nuget.props
+*.nuget.targets
+
+## .NET Core
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## Visual Studio缓存文件
+*.[Cc]ache
+!?*.[Cc]ache/
+
+## Resharper文件
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+## TeamCity文件
+_TeamCity*
+
+## 本地历史文件
+.localhistory/
+
+## VS Code文件
+.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+## 本地历史文件夹
+.history/
+
+## Windows文件
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+## macOS文件
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+## 测试结果文件
+TestResults/
+[Tt]est[Rr]esult*/
+
+## 数据库文件
+*.mdf
+*.ldf
+*.ndf
+
+## LiteDB文件
+*.db
+*.lock
+
+## 备份文件
+*.bak
+*.backup
+
+## 临时文件
+*.pyc
