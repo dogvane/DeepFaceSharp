@@ -1,51 +1,84 @@
 using System;
 using System.IO;
 using DeepFace.Config;
+using DeepFace.Factory;
+using DeepFace.Models;
 
 namespace DeepFace
 {
+
+    /// <summary>
+    /// 人脸识别模型后端类型
+    /// </summary>
+    public enum RepresentationBackend
+    {
+        ArcFace,
+        FaceNet
+    }
+
+    /// <summary>
+    /// 人脸检测后端类型
+    /// </summary>
+    public enum DetectorBackend
+    {
+        YuNet,
+        /// <summary>YOLOv8</summary>
+        YoloV8,
+        /// <summary>YOLOv11 Nano版本</summary>
+        YoloV11n,
+        /// <summary>YOLOv11 Small版本</summary>
+        YoloV11s,
+        /// <summary>YOLOv11 Medium版本</summary>
+        YoloV11m,
+    }
+
+    /// <summary>
+    /// 人脸检测类配置类
+    /// </summary>
+    public class DeepFaceConfig
+    {
+        /// <summary>
+        /// 检测模型后端，默认为ArcFace
+        /// </summary>
+        public RepresentationBackend RepresentationBackend { get; set; } = RepresentationBackend.ArcFace;
+
+        /// <summary>
+        /// 人脸识别后端，默认为YuNet
+        /// </summary>
+        public DetectorBackend DetectorBackend { get; set; } = DetectorBackend.YuNet;
+
+        /// <summary>
+        /// 是否对齐人脸，默认为true
+        /// </summary>
+        public bool Align { get; set; } = true;
+
+        /// <summary>
+        /// 扩展百分比，默认为0
+        /// </summary>
+        public int ExpandPercentage { get; set; } = 0;
+    }
+
+
     /// <summary>
     /// DeepFace主类，用于初始化和配置模型
     /// </summary>
-    public static class DeepFace
+    public partial class DeepFace
     {
-        /// <summary>
-        /// 初始化DeepFace库
-        /// </summary>
-        /// <param name="modelsDirectory">模型目录路径，如果为null则使用默认路径</param>
-        public static void Initialize(string modelsDirectory = null)
-        {
-            if (string.IsNullOrEmpty(modelsDirectory))
-            {
-                // 默认使用应用程序目录下的models文件夹
-                modelsDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "models");
-            }
-            
-            // 确保目录存在
-            if (!Directory.Exists(modelsDirectory))
-            {
-                Directory.CreateDirectory(modelsDirectory);
-            }
-
-            // 初始化模型配置
-            ModelConfiguration.Instance.Initialize(modelsDirectory);
-            
-            Console.WriteLine($"DeepFace 初始化完成，模型目录: {modelsDirectory}");
-        }
+        private readonly DeepFaceConfig _config;
+        private readonly IDetection _detector;
+        private readonly IRecognition _recognizer;
 
         /// <summary>
-        /// 设置人脸检测的默认置信度阈值
+        /// 构造函数
         /// </summary>
-        /// <param name="threshold">阈值(0-1之间的浮点数)</param>
-        public static void SetDetectionThreshold(float threshold)
+        /// <param name="config">表示模型配置，如果为null则使用默认配置</param>
+        public DeepFace(DeepFaceConfig config = null)
         {
-            if (!ModelConfiguration.Instance.IsInitialized)
-            {
-                throw new InvalidOperationException("请先调用 DeepFace.Initialize() 方法初始化模型配置");
-            }
-            
-            ModelConfiguration.Instance.SetDetectionThreshold(threshold);
-            Console.WriteLine($"人脸检测置信度阈值已设置为: {threshold}");
+            _config = config ?? new DeepFaceConfig();
+            // 在构造函数中初始化检测器和识别器
+            _detector = FaceFactory.CreateDetector(_config.DetectorBackend);
+            _recognizer = FaceFactory.CreateRecognizer(_config.RepresentationBackend);
         }
+
     }
 }

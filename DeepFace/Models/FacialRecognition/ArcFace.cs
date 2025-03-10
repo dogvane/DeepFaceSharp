@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace DeepFace.Models.FacialRecognition
 {
-    public class ArcFace:IDisposable,IRecognition
+    public class ArcFace : IDisposable, IRecognition
     {
         private readonly InferenceSession _session;
         static string ModelUrl { get; set; } = "https://github.com/dogvane/DeepFaceSharp/releases/download/v0.0.0/arcface.onnx";
@@ -58,7 +58,7 @@ namespace DeepFace.Models.FacialRecognition
             }
         }
 
-        public float[] GetEmbeddingByMat(Mat image)
+        public float[] GetEmbedding(Mat image)
         {
             var resizedImage = image.Resize(112, 112).Image;
             // 创建输入张量
@@ -84,8 +84,8 @@ namespace DeepFace.Models.FacialRecognition
 
         public float[] GetEmbedding(string imagePath)
         {
-            var mat = Cv2.ImRead(imagePath);
-            return GetEmbeddingByMat(mat);
+            using var mat = Cv2.ImRead(imagePath);
+            return GetEmbedding(mat);
         }
     }
 }

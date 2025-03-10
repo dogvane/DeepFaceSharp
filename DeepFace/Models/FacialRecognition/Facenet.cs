@@ -128,8 +128,7 @@ namespace DeepFace.Models.FacialRecognition
                 throw new FileNotFoundException("Model file not found. " + _config.ModelPath);
             }
         }
-
-        public float[] GetEmbeddingByMat(Mat image)
+        public float[] GetEmbedding(Mat image)
         {
             var resizedImage = image.Resize(160, 160).Image;
 
@@ -156,8 +155,8 @@ namespace DeepFace.Models.FacialRecognition
 
         public float[] GetEmbedding(string imagePath)
         {
-            var mat = Cv2.ImRead(imagePath);
-            return GetEmbeddingByMat(mat);
+            using var mat = Cv2.ImRead(imagePath);
+            return GetEmbedding(mat);
         }
     }
 }

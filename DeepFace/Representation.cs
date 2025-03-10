@@ -8,73 +8,61 @@ using DeepFace.Models;
 
 namespace DeepFace
 {
-    public class Representation
+    /// <summary>
+    /// 
+    /// </summary>
+    public class RepresentationResult
     {
-        public class FacialArea
-        {
-            public int X { get; set; }
-            public int Y { get; set; }
-            public int Width { get; set; }
-            public int Height { get; set; }
-        }
+        /// <summary>
+        /// 人脸嵌入向量
+        /// </summary>
+        public float[] Embedding { get; set; }
 
-        public class RepresentationResult
-        {
-            public float[] Embedding { get; set; }
-            public FacialArea FacialArea { get; set; }
-            public float FaceConfidence { get; set; }
-        }
+        /// <summary>
+        /// 人脸检测结果
+        /// </summary>
+        public DetectionResult DetectionResult { get; set; }
+    }
 
-        public RepresentationResult Represent(
-            string imgPath,
-            string modelName = "arcface",
-            bool enforceDetection = true,
-            string detectorBackend = "yunet",
-            bool align = true,
-            int expandPercentage = 0,
-            string normalization = "base",
-            bool antiSpoofing = false,
-            int? maxFaces = null)
+    /// <summary>
+    /// 人脸检测类，用于提取人脸特征
+    /// </summary>
+    public partial class DeepFace
+    {
+        /// <summary>
+        /// 提取图像中人脸的特征表示
+        /// </summary>
+        /// <param name="imgPath">图像文件路径</param>
+        /// <param name="maxFaces">最大处理的人脸数量，null表示处理所有人脸</param>
+        /// <returns></returns>
+        public List<RepresentationResult> Represent(string imgPath, int? maxFaces = null)
         {
             if (!File.Exists(imgPath))
             {
-                throw new FileNotFoundException("图像文件不存在", imgPath);
+                throw new FileNotFoundException("Image file does not exist", imgPath);
             }
-
-            // 使用工厂方法创建检测器和识别器
-            var detector = FaceFactory.CreateDetector(detectorBackend);
-            var recognizer = FaceFactory.CreateRecognizer(modelName);
 
             // 人脸检测
-            var detectionResults = detector.DetectFaces(imgPath);
-            
-            if (!detectionResults.Any())
+            var detectionResults = ExtractFaces(imgPath);
+
+            if (maxFaces.HasValue)
             {
-                if (enforceDetection)
-                {
-                    throw new Exception("未检测到人脸");
-                }
-                return null;
+                detectionResults = detectionResults
+                    .OrderByDescending(x => x.Confidence)
+                    .Take(maxFaces.Value).ToList();
             }
 
-            // 获取最大置信度的人脸
-            var bestFace = detectionResults.OrderByDescending(x => x.Confidence).First();
-            
-            // 获取人脸特征向量
-            var embedding = recognizer.GetEmbedding(imgPath);
+            var result = new List<RepresentationResult>();
 
-            return new RepresentationResult
+            foreach (var detectionResult in detectionResults)
             {
-                Embedding = embedding,
-                FacialArea = new FacialArea
-                {
-                    X = bestFace.FacialArea.X,
-                    Y = bestFace.FacialArea.Y,
-                    Width = bestFace.FacialArea.W,
-                    Height = bestFace.FacialArea.H
-                },
-                FaceConfidence = bestFace.Confidence
-            };
+                RepresentationResult representationResult = new RepresentationResult();
+                representationResult.DetectionResult = detectionResult;
+                representationResult.Embedding = _recognizer.GetEmbedding(detectionResult.Face);
+                result.Add(representationResult);
+            }
+
+            return result;
         }
     }
 }

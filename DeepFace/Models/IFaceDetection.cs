@@ -9,6 +9,6 @@ namespace DeepFace.Models
     public interface IDetection
     {
         List<DetectionResult> DetectFaces(string imagePath);
-        List<DetectionResult> DetectFacesFromImage(Mat image);
+        List<DetectionResult> DetectFaces(Mat image);
     }
 }

@@ -45,7 +45,7 @@ namespace DeepFace.Config
         /// <summary>
         /// 人脸检测的默认置信度阈值
         /// </summary>
-        public float DetectionThreshold { get; private set; };
+        public float DetectionThreshold { get; private set; }
 
         private ModelConfiguration()
         {

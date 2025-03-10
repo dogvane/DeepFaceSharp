@@ -18,9 +18,9 @@ namespace DeepFace
             //TestYuNet();
             //yolov8();
             // yolov11();
-            //DetectionTest();
-            //TestArcFace();
-            FacenetTest();
+            DetectionTest();
+            // TestArcFace();
+            //FacenetTest();
         }
 
         /// <summary>
@@ -92,10 +92,10 @@ namespace DeepFace
         private static void DetectionTest()
         {
             ModelConfiguration.Instance.SetDetectionThreshold(0.8f);
-
+            var deepface = new DeepFace();
             var sourceimg = "../../../../SampleImages/000000001000.jpg";
             bool align = true;
-            var ret = Detection.ExtractFaces(sourceimg,
+            var ret = deepface.ExtractFaces(sourceimg,
                 align: align,
                 expandPercentage: 20);
 
@@ -107,7 +107,7 @@ namespace DeepFace
             }
 
             align = false;
-            var ret2 = Detection.ExtractFaces(sourceimg,
+            var ret2 = deepface.ExtractFaces(sourceimg,
                 align: align,
                 expandPercentage: 20);
 
@@ -125,7 +125,7 @@ namespace DeepFace
             var fileName = "../../../../SampleImages/000000001000_align_False_4.jpg";
 
             var image = Cv2.ImRead(fileName);
-            var ret = facenet.GetEmbeddingByMat(image);
+            var ret = facenet.GetEmbedding(image);
             Console.WriteLine(ret.Length);
             var txt = string.Join("\n", ret);
             File.WriteAllText("facenet128_net_onnx.txt", txt);
@@ -137,7 +137,7 @@ namespace DeepFace
             var fileName = "../../../../SampleImages/000000001000_align_False_4.jpg";
 
             var image = Cv2.ImRead(fileName);
-            var ret = arcFace.GetEmbeddingByMat(image);
+            var ret = arcFace.GetEmbedding(image);
             Console.WriteLine(ret.Length);
             var txt = string.Join("\n", ret);
             File.WriteAllText("arcface_net_onnx.txt", txt);

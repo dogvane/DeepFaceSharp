@@ -11,58 +11,55 @@ using OpenCvSharp.Extensions;
 
 namespace DeepFace
 {
-    /// <summary>
-    /// 人脸检测后端类型
-    /// </summary>
-    public enum DetectorBackend
-    {
-        YuNet,
-        /// <summary>YOLOv8</summary>
-        YoloV8,
-        /// <summary>YOLOv11 Nano版本</summary>
-        YoloV11n,
-        /// <summary>YOLOv11 Small版本</summary>
-        YoloV11s,
-        /// <summary>YOLOv11 Medium版本</summary>
-        YoloV11m,
-    }
 
-    public class Detection
+    public partial class DeepFace
     {
-        public static List<DetectionResult> ExtractFaces(
-            string imgPath,
-            DetectorBackend detectorBackend = DetectorBackend.YuNet,
-            bool outputFaceMat = true, // 是否输出人脸Mat对象
-            bool align = true, // 是否启用人脸对齐(默认为True) 注：只有当outputFaceMat为True时才有效，仅作用于Face对象
-            int expandPercentage = 0 // 人脸区域扩展百分比 (0-100) 注：只有当outputFaceMat为True时才有效，仅作用于Face对象
-            )
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="imgPath"></param>
+        /// <param name="outputFaceMat">结果里是否输出人脸的图片</param>
+        /// <param name="align">是否人脸对齐(仅输出人脸时生效)</param>
+        /// <param name="expandPercentage">抽取人脸的扩展范围 0-100 (仅输出人脸时生效)</param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException"></exception>
+        public List<DetectionResult> ExtractFaces(string imgPath, bool outputFaceMat = true, bool?align = true, int? expandPercentage = 0)
         {
             if (string.IsNullOrEmpty(imgPath) || !File.Exists(imgPath))
             {
-                throw new ArgumentException($"无效的图像路径: {imgPath}");
+                throw new ArgumentException($"Invalid image path: {imgPath}");
             }
 
             // 加载图像
             using var sourceImage = Cv2.ImRead(imgPath);
             if (sourceImage.Empty())
             {
-                throw new ArgumentException($"无法加载图像: {imgPath}");
+                throw new ArgumentException($"Failed to load image: {imgPath}");
             }
 
-            // 获取检测器实例
-            var detector = Factory.FaceFactory.CreateDetector(detectorBackend.ToString().ToLower());
-
             // 检测人脸
-            var detectionResults = detector.DetectFacesFromImage(sourceImage);
+            var detectionResults = _detector.DetectFaces(sourceImage);
 
             if (!detectionResults.Any())
             {
-                Console.WriteLine("未检测出人脸!");
+                Console.WriteLine("No face detected!");
                 return detectionResults;
             }
 
             if (outputFaceMat)
             {
+                var _align = _config.Align;
+                var _expandPercentage = _config.ExpandPercentage;
+
+                if (align != null)
+                {
+                    _align = align.Value;
+                }
+
+                if (expandPercentage != null)
+                {
+                    _expandPercentage = expandPercentage.Value;
+                }
                 // 使用新的人脸对齐算法处理每个检测结果
                 foreach (var result in detectionResults)
                 {
@@ -70,8 +67,8 @@ namespace DeepFace
                     result.Face = FaceAlignment.ExtractFace(
                         result.FacialArea,
                         sourceImage,
-                        align,
-                        expandPercentage
+                        _align,
+                        _expandPercentage
                     );
                 }
             }

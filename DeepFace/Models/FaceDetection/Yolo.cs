@@ -360,10 +360,5 @@ namespace DeepFace.Models
         {
             return DetectFaces(Cv2.ImRead(imagePath));
         }
-
-        public List<DetectionResult> DetectFacesFromImage(Mat image)
-        {
-            return DetectFaces(image);
-        }
     }
 }
