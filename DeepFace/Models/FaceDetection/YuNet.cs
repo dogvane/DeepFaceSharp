@@ -20,58 +20,36 @@ namespace DeepFace.Models
     /// </summary>
     public class YuNet : IDisposable, IDetection
     {
-        private const string MODEL_URL = "https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx";
-        private const string MODEL_MD5 = "4ae92eeb150c82ce15ac80738b3b8167"; // 请替换为实际的MD5值
         private readonly InferenceSession _session;
-
-        public class Config
+        public class Config : ModelBaseConfig
         {
-            public string ModelPath { get; set; } = "models/face_detection_yunet_2023mar.onnx";
             public float ScoreThreshold { get; set; } = 0.9f;
-            public bool AutoDownload { get; set; } = true; // 添加自动下载选项
-            public Config() { }
+
+            public Config()
+            {
+                var path = ModelConfiguration.Instance.ModelsDirectory;
+                ModelFile = Path.Combine(path, "yunet.onnx");
+                ModelUrl = "https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx";
+                DeviceId = ModelConfiguration.Instance.DeviceId;
+                PreferredBackend = ModelConfiguration.Instance.PreferredGPUBackend;
+                ScoreThreshold = ModelConfiguration.Instance.DetectionThreshold;
+            }
         }
 
         private Config _config;
 
-        public YuNet(Config config = null)
+        public YuNet() : this(new Config())
         {
-            if (config == null)
-            {
-                _config = new Config
-                {
-                    ModelPath = ModelConfiguration.Instance.GetModelPath("face_detection_yunet_2023mar.onnx"),
-                    ScoreThreshold = ModelConfiguration.Instance.DetectionThreshold,
-                    AutoDownload = true
-                };
-            }
-            else
-            {
-                _config = config;
-            }
-            
+
+        }
+
+        public YuNet(Config config)
+        {
+            _config = config;
+
             // 检查模型文件是否存在，不存在则尝试下载
-            if (!File.Exists(_config.ModelPath) && _config.AutoDownload)
-            {
-                try
-                {
-                    Console.WriteLine($"Model file not found, attempting to download from {MODEL_URL}...");
-                    _config.ModelPath = ModelDownloadUtils.EnsureModelExists(_config.ModelPath, MODEL_URL, null, MODEL_MD5);
-                }
-                catch (Exception ex)
-                {
-                    throw new FileNotFoundException($"Failed to download model file: {ex.Message}", ex);
-                }
-            }
-            
-            if (File.Exists(_config.ModelPath))
-            {
-                _session = new InferenceSession(_config.ModelPath);
-            }
-            else
-            {
-                throw new FileNotFoundException($"Model file not found: {_config.ModelPath}\nPlease ensure model configuration is initialized and the file exists, or enable auto-download.");
-            }
+            ModelDownloadUtils.EnsureModelExists(_config.ModelFile, _config.ModelUrl);
+            _session = OnnxUtils.CreateSession(_config.ModelFile, _config.DeviceId, _config.PreferredBackend);
         }
 
         public List<DetectionResult> DetectFaces(Mat image)

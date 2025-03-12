@@ -110,3 +110,21 @@ The project can directly use the specific algorithms mentioned above, or can be 
     var txt = string.Join("\n", ret);
     File.WriteAllText("facenet128_net_onnx.txt", txt);
 ```
+
+## GPU Version Adaptation
+
+Although different versions of the ONNX CUDA runtime support from 11.8 to 12.x [details](https://onnxruntime.ai/docs/execution-providers/CUDA-ExecutionProvider.html),
+the .NET compiled versions do not have such broad version support. Starting from version 1.20.0, CUDA support is limited to 12.x and requires cudnn9 or above.
+
+| ONNX Runtime Version |  CUDA Version | Notes |
+| -------------------- | ------------- | ----- |
+| 1.16.x - 1.19.x      | CUDA 11.8     | Requires cudnn8 |
+| 1.20.0 and above     | CUDA 12.x     | Requires cudnn9 |
+
+- If CUDA cannot be enabled, it's recommended to choose an appropriate ONNX version according to the version correspondence above and your local CUDA environment, or fall back to the CPU version.
+- For Windows environments, I personally recommend using the DirectML version.
+
+```csharp
+    // Method to enable GPU
+    ModelConfiguration.Instance.SetGPUConfig(GPUBackend.DirectML);
+```

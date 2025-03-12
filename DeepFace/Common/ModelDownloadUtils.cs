@@ -270,7 +270,7 @@ namespace DeepFace.Common
             }
             else
             {
-                Console.WriteLine("Model file not found, downloading required"); // 模型文件不存在，需要下载
+                Console.WriteLine($"Model file({localPath}) not found, downloading required."); // 模型文件不存在，需要下载
             }
 
             // 下载模型

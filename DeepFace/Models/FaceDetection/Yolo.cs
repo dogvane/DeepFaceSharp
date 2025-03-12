@@ -20,7 +20,7 @@ namespace DeepFace.Models
     /// </summary>
     public class Yolo : IDisposable, IDetection
     {
-        private readonly InferenceSession _session;
+        private InferenceSession _session;
         
         /// <summary>
         /// 可用的Yolo模型类型
@@ -42,26 +42,30 @@ namespace DeepFace.Models
         };
         
         // 模型下载地址字典
-        private static readonly Dictionary<string, string> MODEL_DOWNLOAD_URLS = new Dictionary<string, string>
+        private static readonly Dictionary<YoloModel, string> MODEL_DOWNLOAD_URLS = new Dictionary<YoloModel, string>
         {
-            { "yolov8n-face.onnx", "https://github.com/dogvane/DeepFaceSharp/releases/download/v0.0.0/yolov8n-face.onnx" },
-            { "yolov11n-face.onnx", "https://github.com/dogvane/DeepFaceSharp/releases/download/v0.0.0/yolov11n-face.onnx" },
-            { "yolov11s-face.onnx", "https://github.com/dogvane/DeepFaceSharp/releases/download/v0.0.0/yolov11s-face.onnx" },
-            { "yolov11m-face.onnx", "https://github.com/dogvane/DeepFaceSharp/releases/download/v0.0.0/yolov11m-face.onnx" }
+            { YoloModel.YoloV8NFace, "https://github.com/dogvane/DeepFaceSharp/releases/download/v0.0.0/yolov8n-face.onnx" },
+            { YoloModel.YoloV11NFace, "https://github.com/dogvane/DeepFaceSharp/releases/download/v0.0.0/yolov11n-face.onnx" },
+            { YoloModel.YoloV11SFace, "https://github.com/dogvane/DeepFaceSharp/releases/download/v0.0.0/yolov11s-face.onnx" },
+            { YoloModel.YoloV11MFace, "https://github.com/dogvane/DeepFaceSharp/releases/download/v0.0.0/yolov11m-face.onnx" }
         };
 
-        public class Config
+        public class Config : ModelBaseConfig
         {
-            public string ModelPath { get; set; } = "models/yolov8n-face.onnx";
-            public float ScoreThreshold { get; set; } = 0.9f;
-            public YoloModel ModelType { get; set; } = YoloModel.YoloV8NFace;
-            
-            public Config() { }
-            
+            public float ScoreThreshold { get; set; }
+            public YoloModel ModelType { get; set; }
+
+            public Config() : this(YoloModel.YoloV8NFace)
+            {
+            }
+
             public Config(YoloModel modelType)
             {
                 ModelType = modelType;
-                ModelPath = $"models/{WEIGHT_NAMES[(int)modelType]}";
+                string modelFileName = WEIGHT_NAMES[(int)ModelType];
+                ModelFile = Path.Combine(ModelConfiguration.Instance.ModelsDirectory, modelFileName);
+                ModelUrl = MODEL_DOWNLOAD_URLS[ModelType];
+                ScoreThreshold = ModelConfiguration.Instance.DetectionThreshold;
             }
         }
 
@@ -69,109 +73,28 @@ namespace DeepFace.Models
 
         public Yolo() : this(YoloModel.YoloV8NFace)
         {
-
         }
+        
         public Yolo(YoloModel modelType = YoloModel.YoloV8NFace)
         {
-            _config = new Config
-            {
-                ModelType = modelType,
-                ModelPath = ModelConfiguration.Instance.GetModelPath(WEIGHT_NAMES[(int)modelType]),
-                ScoreThreshold = ModelConfiguration.Instance.DetectionThreshold
-            };
-
-            EnsureModelExists(_config.ModelPath, WEIGHT_NAMES[(int)modelType]);
-
-            if (File.Exists(_config.ModelPath))
-            {
-                _session = new InferenceSession(_config.ModelPath);
-                _session.PrintOnnxMetadata();
-            }
-            else
-            {
-                // 模型文件未找到，抛出文件未找到异常
-                throw new FileNotFoundException($"Model file not found: {_config.ModelPath}\nPlease make sure model configuration is initialized and the file exists.");
-            }
+            _config = new Config(modelType);
+            InitializeModel();
         }
 
-        public Yolo(Config config = null)
+        public Yolo(Config config)
         {
-            if (config == null)
-            {
-                if (!ModelConfiguration.Instance.IsInitialized)
-                {
-                    _config = new Config();
-                }
-                else
-                {
-                    YoloModel modelType = YoloModel.YoloV8NFace; // 默认使用YoloV8NFace
-                    
-                    _config = new Config
-                    {
-                        ModelType = modelType,
-                        ModelPath = ModelConfiguration.Instance.GetModelPath(WEIGHT_NAMES[(int)modelType]),
-                        ScoreThreshold = ModelConfiguration.Instance.DetectionThreshold
-                    };
-                }
-            }
-            else
-            {
-                _config = config;
-            }
-            
-            string modelFileName = Path.GetFileName(_config.ModelPath);
-            EnsureModelExists(_config.ModelPath, modelFileName);
-            
-            if (File.Exists(_config.ModelPath))
-            {
-                _session = new InferenceSession(_config.ModelPath);
-                _session.PrintOnnxMetadata();
-            }
-            else
-            {
-                // 模型文件未找到，抛出文件未找到异常
-                throw new FileNotFoundException($"Model file not found: {_config.ModelPath}\nPlease make sure model configuration is initialized and the file exists.");
-            }
+            _config = config ?? new Config();
+            InitializeModel();
         }
         
         /// <summary>
-        /// 确保模型文件存在，如果不存在则从GitHub下载
+        /// 初始化模型
         /// </summary>
-        /// <param name="modelPath">模型本地路径</param>
-        /// <param name="modelFileName">模型文件名</param>
-        private void EnsureModelExists(string modelPath, string modelFileName)
+        private void InitializeModel()
         {
-            if (!File.Exists(modelPath) && MODEL_DOWNLOAD_URLS.ContainsKey(modelFileName))
-            {
-                // 提示模型文件不存在，开始下载
-                Console.WriteLine($"Model file does not exist: {modelPath}, downloading from GitHub...");
-                
-                // 确保目录存在
-                string directory = Path.GetDirectoryName(modelPath);
-                if (!Directory.Exists(directory))
-                {
-                    Directory.CreateDirectory(directory);
-                }
-                
-                try
-                {
-                    // 使用ModelDownloadUtils下载模型
-                    ModelDownloadUtils.EnsureModelExists(
-                        modelPath,
-                        MODEL_DOWNLOAD_URLS[modelFileName],
-                        ModelDownloadUtils.CreateDefaultProgressHandler()
-                    );
-                    
-                    // 提示模型文件下载成功
-                    Console.WriteLine($"Model file downloaded successfully: {modelPath}");
-                }
-                catch (Exception ex)
-                {
-                    // 提示模型文件下载失败
-                    Console.WriteLine($"Model file download failed: {ex.Message}");
-                    // 下载失败仍会继续，让后续的File.Exists检查决定是否抛出异常
-                }
-            }
+            // 检查模型文件是否存在，不存在则尝试下载
+            ModelDownloadUtils.EnsureModelExists(_config.ModelFile, _config.ModelUrl);
+            _session = OnnxUtils.CreateSession(_config.ModelFile, _config.DeviceId, _config.PreferredBackend);
         }
 
         public List<DetectionResult> DetectFaces(Mat image)
@@ -345,11 +268,6 @@ namespace DeepFace.Models
             return detectionResults;
         }
 
-        // 添加Sigmoid函数
-        private float Sigmoid(float x)
-        {
-            return 1.0f / (1.0f + (float)Math.Exp(-x));
-        }
 
         public void Dispose()
         {

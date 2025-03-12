@@ -110,3 +110,21 @@ DeepFaceSharp是一个基于C#的人脸识别库，它是对[deepface](https://g
     var txt = string.Join("\n", ret);
     File.WriteAllText("facenet128_net_onnx.txt", txt);
 ```
+
+## GPU 版本的适配
+
+虽然onnx不同版本的cuda运行库，支持从 11.8 到 12.x [说明](https://onnxruntime.ai/docs/execution-providers/CUDA-ExecutionProvider.html)。
+但是，.net编译的版本，则没有这么宽泛的版本支持，从 1.20.0 开始, cuda的版本就只支持12.x的了。并且还需 cudnn9 以上的版本。
+
+| ONNX Runtime 版本 |  CUDA 版本 | 备注 |
+| ----------------- | --------------- | ---- |
+| 1.16.x - 1.19.x   | CUDA 11.8       | 需要 cudnn8 |
+| 1.20.0 及以上     | CUDA 12.x       | 需要 cudnn9 |
+
+- 如果发现cuda无法开启，建议根据上述的版本对应关系，以及本机的cuda环境，选择合适的onnx版本。或者退回cpu版本。
+- 个人推荐在window环境下使用 DirectML 的版本。
+
+```csharp
+    // 启用gpu的方法
+    ModelConfiguration.Instance.SetGPUConfig(GPUBackend.DirectML);
+```

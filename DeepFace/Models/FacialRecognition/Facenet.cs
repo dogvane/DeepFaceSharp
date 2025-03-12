@@ -1,4 +1,5 @@
 using DeepFace.Common;
+using DeepFace.Config;
 using Microsoft.ML.OnnxRuntime;
 using OpenCvSharp;
 using System;
@@ -30,37 +31,29 @@ namespace DeepFace.Models.FacialRecognition
             Dimension512 = 512
         }
 
-        public class Config
+        public class Config : ModelBaseConfig
         {
-            public string ModelPath { get; set; }
-
             /// <summary>
             /// 目前的已有的模型只支持128和512维的嵌入向量
             /// 模型文件需要自己指定到对应不同的维度
             /// 但输入的图片尺寸仍然维持 160x160
             /// </summary>
             public EmbeddingDimension EmbeddingSize { get; set; }
-            
-            /// <summary>
-            /// 模型不存在时是否自动从网络下载
-            /// </summary>
-            public bool AutoDownload { get; set; } = false;
-            
-            /// <summary>
-            /// 模型文件的预期MD5值，用于校验下载的模型是否正确
-            /// </summary>
-            public string ExpectedMd5 { get; set; } = null;
 
             public Config(EmbeddingDimension embedding = EmbeddingDimension.Dimension128)
             {
                 EmbeddingSize = embedding;
-                switch(embedding)
+                ModelFile = ModelConfiguration.Instance.ModelsDirectory;
+
+                switch (embedding)
                 {
                     case EmbeddingDimension.Dimension128:
-                        ModelPath = "models/facenet128_weights.onnx";
+                        ModelFile = Path.Combine(ModelFile, "facenet128_weights.onnx");
+                        ModelUrl = "https://github.com/dogvane/DeepFaceSharp/releases/download/v0.0.0/facenet128_weights.onnx";
                         break;
                     case EmbeddingDimension.Dimension512:
-                        ModelPath = "models/facenet512_weights.onnx";
+                        ModelFile = Path.Combine(ModelFile, "facenet512_weights.onnx");
+                        ModelUrl = "https://github.com/dogvane/DeepFaceSharp/releases/download/v0.0.0/facenet512_weights.onnx";
                         break;
                     default:
                         throw new ArgumentException("Unsupported embedding size");
@@ -69,65 +62,21 @@ namespace DeepFace.Models.FacialRecognition
         }
 
         private Config _config;
-        
-        // 模型下载链接
-        private static readonly Dictionary<EmbeddingDimension, string> ModelUrls = new Dictionary<EmbeddingDimension, string>
-        {
-            { EmbeddingDimension.Dimension128, "https://github.com/dogvane/DeepFaceSharp/releases/download/v0.0.0/facenet128_weights.onnx" },
-            { EmbeddingDimension.Dimension512, "https://github.com/dogvane/DeepFaceSharp/releases/download/v0.0.0/facenet512_weights.onnx" }
-        };
 
-        public Facenet(Config config = null)
+        public Facenet() : this(new Config())
         {
-            if (config == null)
-            {
-                _config = new Config() { AutoDownload = true };
-            }
-            else
-            {
-                _config = config;
-            }
-            
-            // 检查模型文件是否存在，不存在则尝试下载
-            if (!File.Exists(_config.ModelPath) && _config.AutoDownload)
-            {
-                if (ModelUrls.TryGetValue(_config.EmbeddingSize, out string downloadUrl))
-                {
-                    Console.WriteLine($"Model file not found. Attempting to download {(int)_config.EmbeddingSize}d model...");
-                    try
-                    {
-                        ModelDownloadUtils.EnsureModelExists(
-                            _config.ModelPath, 
-                            downloadUrl, 
-                            expectedMd5: _config.ExpectedMd5
-                        );
-                    }
-                    catch (Exception ex)
-                    {
-                        throw new Exception($"Failed to download model: {ex.Message}", ex);
-                    }
-                }
-                else
-                {
-                    throw new Exception($"No download URL defined for embedding size {(int)_config.EmbeddingSize}");
-                }
-            }
-            
-            if (File.Exists(_config.ModelPath))
-            {
-                _session = new InferenceSession(_config.ModelPath);
-                var outSize = _session.OutputMetadata.First().Value.Dimensions[1];
-                if (outSize != (int)_config.EmbeddingSize)
-                {
-                    _session.PrintOnnxMetadata();
-                    throw new Exception($"The model does not support the specified embedding size. onnx.out:{outSize} config.use:{(int)_config.EmbeddingSize}");
-                }
-            }
-            else
-            {
-                throw new FileNotFoundException("Model file not found. " + _config.ModelPath);
-            }
+
         }
+
+        public Facenet(Config config)
+        {
+            _config = config;
+
+            // 检查模型文件是否存在，不存在则尝试下载
+            ModelDownloadUtils.EnsureModelExists(_config.ModelFile, _config.ModelUrl);
+            _session = OnnxUtils.CreateSession(_config.ModelFile, _config.DeviceId, _config.PreferredBackend);
+        }
+
         public float[] GetEmbedding(Mat image)
         {
             var resizedImage = image.Resize(160, 160).Image;

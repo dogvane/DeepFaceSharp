@@ -1,8 +1,43 @@
 using System;
 using System.IO;
+using static DeepFace.Models.FacialRecognition.Facenet;
 
 namespace DeepFace.Config
 {
+    public enum GPUBackend
+    {
+        Auto,
+        CUDA,
+        DirectML
+    }
+
+    /// <summary>
+    /// 模型的基础配置类
+    /// </summary>
+    public class ModelBaseConfig
+    {
+        /// <summary>
+        /// 模型文件，到具体的 onnx 文件
+        /// </summary>
+        public string ModelFile { get; set; }
+
+        /// <summary>
+        /// 模型下载地址
+        /// </summary>
+        public string ModelUrl { get; set; }
+
+        /// <summary>
+        /// 如果使用gpu，则指定设备id
+        /// 通常只有一个显卡，并且插在主板上的第一个pcie位置上，通常为0
+        /// </summary>
+        public int DeviceId { get; set; } = 0;
+
+        /// <summary>
+        /// 指定onnx使用的后端
+        /// </summary>
+        public GPUBackend PreferredBackend { get; set; } = GPUBackend.Auto;
+    }
+
     /// <summary>
     /// 深度学习模型配置类，用于全局管理模型路径
     /// </summary>
@@ -34,6 +69,7 @@ namespace DeepFace.Config
 
         /// <summary>
         /// 模型根目录路径
+        /// 未设置则未当前程序运行目录下的models目录
         /// </summary>
         public string ModelsDirectory { get; private set; }
 
@@ -46,12 +82,24 @@ namespace DeepFace.Config
         /// 人脸检测的默认置信度阈值
         /// </summary>
         public float DetectionThreshold { get; private set; }
+        
+        /// <summary>
+        /// 首选GPU后端
+        /// </summary>
+        public GPUBackend PreferredGPUBackend { get; private set; }
+        
+        /// <summary>
+        /// GPU设备ID
+        /// </summary>
+        public int DeviceId { get; private set; }
 
         private ModelConfiguration()
         {
             ModelsDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "models");
             IsInitialized = false;
             DetectionThreshold = 0.9f;
+            PreferredGPUBackend = GPUBackend.Auto;
+            DeviceId = 0;   // 默认使用第一个GPU设备
         }
 
         /// <summary>
@@ -77,6 +125,18 @@ namespace DeepFace.Config
 
             ModelsDirectory = modelsDirectory;
             IsInitialized = true;
+        }
+
+        /// <summary>
+        /// 设置GPU配置
+        /// </summary>
+        /// <param name="useGPU">是否启用GPU</param>
+        /// <param name="preferredBackend">首选GPU后端</param>
+        /// <param name="deviceId">GPU设备ID</param>
+        public void SetGPUConfig(GPUBackend preferredBackend = GPUBackend.Auto, int deviceId = 0)
+        {
+            PreferredGPUBackend = preferredBackend;
+            DeviceId = deviceId;
         }
 
         /// <summary>

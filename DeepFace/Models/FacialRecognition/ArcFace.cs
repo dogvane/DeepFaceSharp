@@ -1,4 +1,5 @@
 ﻿using DeepFace.Common;
+using DeepFace.Config;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using OpenCvSharp;
@@ -13,49 +14,31 @@ namespace DeepFace.Models.FacialRecognition
     public class ArcFace : IDisposable, IRecognition
     {
         private readonly InferenceSession _session;
-        static string ModelUrl { get; set; } = "https://github.com/dogvane/DeepFaceSharp/releases/download/v0.0.0/arcface.onnx";
 
-        public class Config
+        public class Config : ModelBaseConfig
         {
-            public string ModelPath { get; set; } = "models/arcface.onnx";
-            public Config() { }
+            public Config()
+            {
+                var path = ModelConfiguration.Instance.ModelsDirectory;
+                ModelFile = Path.Combine(path, "arcface.onnx");
+                ModelUrl = "https://github.com/dogvane/DeepFaceSharp/releases/download/v0.0.0/arcface.onnx";
+            }
         }
 
         private Config _config;
 
-        public ArcFace(Config config = null)
+        public ArcFace() : this(new Config())
         {
-            if (config == null)
-            {
-                _config = new Config();
-            }
-            else
-            {
-                _config = config;
-            }
-            
-            if (File.Exists(_config.ModelPath))
-            {
-                _session = new InferenceSession(_config.ModelPath);
-                _session.PrintOnnxMetadata();
-            }
-            else
-            {
-                // 尝试从网络下载模型
-                Console.WriteLine($"Model file not found at {_config.ModelPath}, attempting to download from {ModelUrl}");
-                try
-                {
-                    string downloadedPath = ModelDownloadUtils.EnsureModelExists(_config.ModelPath, ModelUrl);
-                    Console.WriteLine($"Model downloaded successfully to {downloadedPath}");
-                    
-                    _session = new InferenceSession(downloadedPath);
-                    _session.PrintOnnxMetadata();
-                }
-                catch (Exception ex)
-                {
-                    throw new FileNotFoundException($"Model file not found and download failed. {_config.ModelPath}. Error: {ex.Message}", ex);
-                }
-            }
+
+        }
+
+        public ArcFace(Config config)
+        {
+            _config = config;
+
+            // 检查模型文件是否存在，不存在则尝试下载
+            ModelDownloadUtils.EnsureModelExists(_config.ModelFile, _config.ModelUrl);
+            _session = OnnxUtils.CreateSession(_config.ModelFile, _config.DeviceId, _config.PreferredBackend);
         }
 
         public float[] GetEmbedding(Mat image)

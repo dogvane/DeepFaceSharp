@@ -8,6 +8,8 @@ using OpenCvSharp;
 using Point = OpenCvSharp.Point;
 using DeepFace.Models.FacialRecognition;
 using DeepFace.Common;
+using DeepFace.Utils;
+using Microsoft.ML.OnnxRuntime;
 
 namespace DeepFace
 {
@@ -15,12 +17,34 @@ namespace DeepFace
     {
         static void Main(string[] args)
         {
-            //TestYuNet();
+            ModelDownloadUtils.ProxyServer = "http://192.168.1.3:10811";
+            ModelConfiguration.Instance.SetGPUConfig(GPUBackend.DirectML);
+            GetGpuInfos();
+
+            TestYuNet();
             //yolov8();
             // yolov11();
-            DetectionTest();
+            //DetectionTest();
             // TestArcFace();
             //FacenetTest();
+        }
+
+        private static void GetGpuInfos()
+        {
+            var diagnostics = GPUDiagnostics.RunDiagnostics();
+            Console.WriteLine(diagnostics);
+
+            var ret = GPUDiagnostics.GetWindowsGpuInfo();
+            Console.WriteLine(ret);
+            var gpu = GPUDiagnostics.GetAvailableDeviceIds();
+            foreach (var g in gpu)
+            {
+                Console.WriteLine(g.Key);
+                foreach (var d in g.Value)
+                {
+                    Console.WriteLine($"\t{d.DeviceName}:{d.DeviceId}");
+                }
+            }
         }
 
         /// <summary>
